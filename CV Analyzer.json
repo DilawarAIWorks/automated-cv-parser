@@ -1,0 +1,427 @@
+{
+  "name": "CV Analyzer",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "receive-ocr",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1424,
+        -480
+      ],
+      "id": "fafc29b2-7cc5-45b8-9a06-642faf292ff0",
+      "name": "Webhook",
+      "webhookId": "e931da59-8458-42cb-bd29-1a40accee439"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are an expert HR resume analyzer. \nResume Text:\n{{ $json.body.extracted_text }}"
+            }
+          ]
+        },
+        "simplify": false,
+        "jsonOutput": true,
+        "builtInTools": {},
+        "options": {
+          "systemMessage": "Analyze the following resume text (may contain OCR errors) and provide a **short structured JSON** with these fields and with 200 words maximum(strict):  - name - email - skills (technical + soft) - level (Junior / Mid / Senior) - strengths - weaknesses - roles (3 suggested job roles) - missing_skills - tips (5 CV improvement tips) - summary (3-line short, concise, professional summary)"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        -1200,
+        -480
+      ],
+      "id": "0ba3bfaf-63b8-4746-ac2c-77f9a690f742",
+      "name": "Message a model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "JYOprcPJaAUiXeWQ",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Candidate Resume Analysis:\nCompany name: 'AIML Vision'\nName: {{ $json[\"name\"] }}\nEmail: {{ $json.email }}\nExperience Level: {{ $json[\"level\"] }}\n\nKey Skills:\n{{ $json[\"skills\"] }}\n\nStrengths:\n{{ $json[\"strengths\"] }}\n\nWeaknesses:\n{{ $json[\"weaknesses\"] }}\n\nSuggested Job Roles:\n{{ $json[\"roles\"] }}\n\nProfile Summary:\n{{ $json[\"summary\"] }}\n"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "systemMessage": "=You are a professional HR email assistant.\n\nYou will receive a candidate resume analysis.\n\nYour task is to generate TWO separate emails (use the least number of words, but keep full context).\n\nIMPORTANT:\n- Email bodies MUST be written in clean, well-structured HTML\n- Use simple formatting: <p>, <b>, <ul>, <li>, <br>\n- Ensure proper alignment and readability in email clients\n- Do NOT use markdown\n- Keep the emails concise and professional\n\n1. HR Email (Internal):\n- Include candidate name, experience level, key skills, strengths, weaknesses, and suggested roles\n\n2. Applicant Acknowledgment Email:\n- Thank the applicant for submitting their resume\n- Confirm receipt of the application\n- Mention HR will contact them if shortlisted\n- Do NOT approve or reject the applicant\n\nReturn the output strictly in valid JSON format with exactly these fields:\n\n{\n  \"hr_email_subject\": \"...\",\n  \"hr_email_body\": \"<html>...</html>\",\n  \"applicant_email_subject\": \"...\",\n  \"applicant_email_body\": \"<html>...</html>\"\n}\n\nDo not include any extra text outside the JSON.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        -576,
+        -272
+      ],
+      "id": "889954d8-440b-4130-9963-8a6044cc6980",
+      "name": "Message a model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "JYOprcPJaAUiXeWQ",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Assume AI text output is in $json[\"choices\"][0][\"message\"][\"content\"]\nconst aiOutput = $input.first().json.candidates[0].content.parts[0].text;\n\n// Parse text JSON into object\nconst parsed = JSON.parse(aiOutput);\n\n// Return as new JSON for n8n workflow\nreturn [parsed];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -848,
+        -480
+      ],
+      "id": "fdac7c34-8de5-411a-a792-3cac9c34f3dd",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get AI output text\nlet aiOutput = $input.first().json.content.parts[0].text;\n\n// Remove Markdown code fences and trim spaces\naiOutput = aiOutput.replace(/```json|```/g, '').trim();\n\nlet parsed;\ntry {\n    parsed = JSON.parse(aiOutput);\n} catch (error) {\n    throw new Error(\"Failed to parse AI output as JSON: \" + error.message + \"\\nAI Output:\\n\" + aiOutput);\n}\n\n// Return as n8n JSON object\nreturn [\n    {\n        json: parsed\n    }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -144,
+        -80
+      ],
+      "id": "f4a8c3d4-2eea-4e1f-9661-62ca1f0f8f30",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "14dEN-KMv2zLyYvsaVj6E818aKYabQ0AdaImtDd6zkNM",
+          "mode": "list",
+          "cachedResultName": "applicants_record",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14dEN-KMv2zLyYvsaVj6E818aKYabQ0AdaImtDd6zkNM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14dEN-KMv2zLyYvsaVj6E818aKYabQ0AdaImtDd6zkNM/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $('Code in JavaScript').item.json.name }}",
+            "Email": "={{ $('Code in JavaScript').item.json.email }}",
+            "Skills": "={{ $('Code in JavaScript').item.json.skills }}",
+            "Level": "={{ $('Code in JavaScript').item.json.level }}",
+            "Strengths": "={{ $('Code in JavaScript').item.json.strengths }}",
+            "Weaknesses": "={{ $('Code in JavaScript').item.json.weaknesses }}",
+            "Roles": "={{ $('Code in JavaScript').item.json.roles }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Skills",
+              "displayName": "Skills",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Level",
+              "displayName": "Level",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Strengths",
+              "displayName": "Strengths",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Weaknesses",
+              "displayName": "Weaknesses",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Roles",
+              "displayName": "Roles",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -528,
+        -656
+      ],
+      "id": "04d7d5f9-12bf-4b6a-8b09-2095b06c6d2e",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hmYBKeocG65MtLmB",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## 📥 1. Receive Resume\n**Webhook Node**\nReceives a POST request from the Python backend containing the raw resume (plain text) for processing.",
+        "height": 304,
+        "width": 288,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1520,
+        -624
+      ],
+      "typeVersion": 1,
+      "id": "f78e560b-793a-4d6a-9ffc-f0b6768e97bc",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## 🧠 2. CV Extraction & Parsing\n**AI Analysis + JSON Cleanup**\n **Message Model:** Analyzes the plain text resume to extract structured fields: Name, Email, Skills, Level, Strengths, Weaknesses, and Roles.\n**JS Code:** Converts the model's output (stringified JSON) into a usable JSON object.",
+        "height": 352,
+        "width": 480
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1216,
+        -672
+      ],
+      "typeVersion": 1,
+      "id": "c95a5c8f-bf07-4aee-9b97-a4d43fd78334",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## 📊 3. Database Entry\n**Google Sheets**\nLogs the cleaned applicant data (Name, Email, Skills, etc.) into the \"applicants_record\" spreadsheet for permanent storage.",
+        "height": 336,
+        "width": 320,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -656,
+        -816
+      ],
+      "typeVersion": 1,
+      "id": "970ef7d8-dd77-4c6b-ae9d-d689e7d94184",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## ✉️ 4. Email Automation\n**Drafting & Sending**\n**AI Model:** Generates two professional emails (Candidate & HR) formatted in HTML using the extracted data.\n**JS Code:** Converts the model's output (stringified JSON) into a usable JSON object.\n**Gmail Nodes:** Dispatches the specific emails to the Applicant and the HR department respectively.",
+        "height": 576,
+        "width": 880,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -592,
+        -432
+      ],
+      "typeVersion": 1,
+      "id": "6a3696ec-741d-45bc-9be9-088defe3a12c",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "sendTo": "=ds5559680@gmail.com",
+        "subject": "={{ $json.hr_email_subject }}",
+        "message": "={{ $json.hr_email_body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        80,
+        -176
+      ],
+      "id": "3a59edda-9a76-4ccd-a4ed-48dea423611c",
+      "name": "Send email to HR",
+      "webhookId": "3b281470-8452-4da2-8714-b08d97c3c2b4",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "P8THxOGcXjLB41c1",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Code in JavaScript').item.json.email }}",
+        "subject": "={{ $json.applicant_email_subject }}",
+        "message": "={{ $json.applicant_email_body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        80,
+        16
+      ],
+      "id": "1b2f10ef-974e-4857-b108-b038e5b2c2cd",
+      "name": "Send email to applicant",
+      "webhookId": "3b281470-8452-4da2-8714-b08d97c3c2b4",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "P8THxOGcXjLB41c1",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Message a model1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Send email to applicant",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send email to HR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "e5b3e88c-3280-4d32-9cdf-dad3eb2d5a16",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "baf97f86752ab34609feb813c2a99fae23c4e304abb979dfa59378e617c90b1a"
+  },
+  "id": "hALYTc7zmzujVaAW",
+  "tags": []
+}

@@ -1,0 +1,10 @@
+streamlit
+fastapi
+uvicorn
+python-multipart
+requests
+pymupdf
+rapidocr_onnxruntime
+opencv-python
+pillow
+docx2pdf
